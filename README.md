@@ -98,8 +98,8 @@ The `gather` and `alwaysgather` expressions direct us to gather a piece of infor
 
 Each of these values should be an object. The keys in the object should correspond to the fields that we need to get information for. Each of these fields is an object with two values which are either strings or arrays of strings of equal length. The string is essentially is a syntactic sugar for having an array of length, which is by far the most common case. When using an array, the index in the gather corresponds to the store. These required fields are:
 
-`gather`: This is a D expression that describes how to get the value
-`store`: This is a string that describes how to store the value
+* `gather`: This is a D expression that describes how to get the value
+* `store`: This is a string that describes how to store the value
 
 When storing values we must consider two different things:
 
