@@ -1,6 +1,6 @@
 {
 	"name": "meta-d",
-	"description": "generate families of related DTrace scripts",
+	"description": "progammatically generate a family of related DTrace scripts",
 	"version": "0.0.1",
 	"license": "MIT",
 	"contributors": [
