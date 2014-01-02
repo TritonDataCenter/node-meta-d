@@ -7,11 +7,14 @@
 	    "Robert Mustacchi <rm@joyent.com>",
 	    "Dave Pacheco <dap@joyent.com>"
 	],
+	"bin": {
+	    "meta-d": "./bin/meta-d"
+	},
 	"main": "lib/meta-d.js",
 	"dependencies": {
 	    "extsprintf": "1.0.2",
 	    "jsprim": "0.5.1",
 	    "krill": "0.0.1",
-	    "verror": "1.3.6"
+	    "posix-getopt": "1.0.0"
 	}
 }

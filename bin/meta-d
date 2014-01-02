@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+/*
+ * meta-d: translate Meta-D files into D scripts
+ */
+
+var mod_fs = require('fs');
+var mod_path = require('path');
+var mod_vm = require('vm');
+
+var mod_extsprintf = require('extsprintf');
+var mod_getopt = require('posix-getopt');
+var mod_krill = require('krill');
+
+var mod_metad = require('../lib/meta-d');
+
+var sprintf = mod_extsprintf.sprintf;
+
+var mdArg0;			/* program name */
+var mdInput;			/* input stream (Readable) */
+var mdMetaD;			/* Meta-D description */
+var mdPredicate = mod_krill.createPredicate({});
+var mdDecomps = [];
+var mdDecompNumeric;
+var mdZones = null;
+var mdUsageMessage = [
+    'usage: $ARG0 [-s DECOMPOSITION ... ] [-n DECOMPOSITION]',
+    '    [-p PREDICATE] [-z ZONE ... ] [FILENAME]',
+    '',
+    'Reads the Meta-D description in FILENAME, validates it, and translates ',
+    'it into a DTrace script using the given PREDICATE and DECOMPOSITION ',
+    'fields and scoped to the named ZONEs.'
+].join('\n');
+
+function main()
+{
+	var parser, option, filename;
+
+	mdArg0 = mod_path.basename(process.argv[1]);
+
+	parser = new mod_getopt.BasicParser(
+	    'n:p:(predicate)s:z:(zone)',
+	    process.argv);
+	while ((option = parser.getopt()) !== undefined) {
+		switch (option.option) {
+		case 'p':
+			try {
+				mdPredicate = mod_krill.createPredicate(
+				    JSON.parse(option.optarg));
+			} catch (ex) {
+				usage('invalid predicate: %s', option.optarg);
+			}
+			break;
+
+		case 'n':
+			mdDecompNumeric = option.optarg;
+			break;
+
+		case 's':
+			mdDecomps.push(option.optarg);
+			break;
+
+		case 'z':
+			if (mdZones === null)
+				mdZones = [];
+			mdZones.push(option.optarg);
+			break;
+
+		default:
+			usage();
+			break;
+		}
+	}
+
+	if (process.argv.length == parser.optind()) {
+		if (process.stdin.isTTY)
+			console.error('reading from stdin');
+		filename = '<stdin>';
+		mdInput = process.stdin;
+	} else {
+		filename = process.argv[parser.optind()];
+		mdInput = mod_fs.createReadStream(filename);
+		mdInput.on('error', function (err) {
+			fatal('read "%s": %s', filename, err.message);
+		});
+	}
+
+	readAll(mdInput, function (err, utf8contents) {
+		if (err)
+			fatal('read "%s": %s', filename, err.message);
+
+		mdMetaD = execMetaD(filename, utf8contents);
+		validate(mdMetaD);
+		xlate(mdMetaD, mdPredicate, mdDecomps);
+	});
+}
+
+function usage(message)
+{
+	if (message !== undefined)
+		console.error('%s: %s', mdArg0, message);
+
+	console.error(mdUsageMessage.replace(/\$ARG0/g, mdArg0));
+	process.exit(2);
+}
+
+function fatal()
+{
+	var args = Array.prototype.slice.call(arguments);
+
+	console.error('%s: %s', mdArg0, sprintf.apply(null, args));
+	process.exit(1);
+}
+
+function readAll(stream, callback)
+{
+	var contents = '';
+	stream.on('error', callback);
+	stream.on('data', function (chunk) {
+		contents += chunk.toString('utf8');
+	});
+	stream.on('end', function () { callback(null, contents); });
+}
+
+function execMetaD(filename, utf8contents)
+{
+	var script = '(' + utf8contents + ');';
+	var rv;
+
+	try {
+		rv = mod_vm.runInNewContext(script, {}, filename);
+	} catch (ex) {
+		fatal('processing "%s": %s', filename, ex.message);
+	}
+
+	return (rv);
+}
+
+function validate(desc)
+{
+	try {
+		mod_metad.mdValidateMetaD(desc);
+	} catch (ex) {
+		fatal('meta-D is invalid: %s', ex.message);
+	}
+}
+
+function xlate(desc, predicate, decomps)
+{
+	var rv;
+	var fields = {};
+
+	mdDecomps.forEach(function (d) {
+		if (desc.fields.indexOf(d) == -1)
+			fatal('unknown field: "%s"', d);
+		fields[d] = 'string';
+	});
+
+	if (mdDecompNumeric) {
+		if (desc.fields.indexOf(mdDecompNumeric) == -1)
+			fatal('unknown field: "%s"', mdDecompNumeric);
+		fields[mdDecompNumeric] = 'number';
+		mdDecomps.push(mdDecompNumeric);
+	}
+
+	try {
+		rv = mod_metad.mdGenerateDScript(desc, {
+		    'predicate': mdPredicate,
+		    'decomposition': mdDecomps,
+		    'zones': mdZones
+		}, fields);
+	} catch (ex) {
+		fatal('translating: %s', ex.message);
+	}
+
+	process.stdout.write(rv.scripts.join(
+	    '---------------------------------------------\n\n'));
+}
+
+main();

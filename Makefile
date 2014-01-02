@@ -16,7 +16,7 @@ NPM		 = npm
 #
 # Files
 #
-JS_FILES	:= $(shell find examples lib tests -name '*.js')
+JS_FILES	:= bin/meta-d $(shell find lib tests -name '*.js')
 JSON_FILES	 = package.json
 JSL_FILES_NODE   = $(JS_FILES)
 JSSTYLE_FILES	 = $(JS_FILES)
