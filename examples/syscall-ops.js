@@ -1,7 +1,10 @@
 /*
  * DTrace metric for system calls by operation.
  */
-{
+
+/* jsl:declare register */
+
+register({
     fields: [ 'hostname', 'zonename', 'pid', 'execname', 'psargs', 'ppid',
 	'pexecname', 'ppsargs', 'syscall', 'subsecond', 'latency', 'cputime' ],
     metad: {
@@ -73,4 +76,4 @@
 	    }
 	]
     }
-}
+});

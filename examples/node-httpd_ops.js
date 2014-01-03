@@ -1,7 +1,10 @@
 /*
  * DTrace metric for node.js http operations
  */
-{
+
+/* jsl:declare register */
+
+register({
     fields: [ 'hostname', 'zonename', 'pid', 'execname', 'psargs', 'ppid',
 	'pexecname', 'ppsargs', 'http_method', 'http_url', 'raddr', 'rport',
 	'http_path', 'http_origin', 'latency' ],
@@ -126,4 +129,4 @@
 	],
 	usepragmazone: true
     }
-}
+});

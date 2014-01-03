@@ -123,11 +123,17 @@ function readAll(stream, callback)
 
 function execMetaD(filename, utf8contents)
 {
-	var script = '(' + utf8contents + ');';
+	var script = utf8contents;
+	var context = {
+	    'register': function (desc) { rv = desc; },
+	    'sprintf': sprintf
+	};
 	var rv;
 
 	try {
-		rv = mod_vm.runInNewContext(script, {}, filename);
+		mod_vm.runInNewContext(script, context, filename);
+		if (!rv)
+			throw (new Error('didn\'t register itself'));
 	} catch (ex) {
 		fatal('processing "%s": %s', filename, ex.message);
 	}
